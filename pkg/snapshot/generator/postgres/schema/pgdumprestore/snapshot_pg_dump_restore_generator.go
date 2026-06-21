@@ -518,7 +518,7 @@ func (s *SnapshotGenerator) parseDump(d []byte) *dump {
 			continue
 		case alterTable != "":
 			// check if the previous alter table line is split in two lines and matches a constraint
-			if strings.Contains(line, "ADD CONSTRAINT") {
+			if strings.Contains(line, "ADD CONSTRAINT") || isClusterOnAlterTable(line) {
 				indicesAndConstraints.WriteString(alterTable)
 				indicesAndConstraints.WriteString("\n")
 				indicesAndConstraints.WriteString(line)
@@ -577,6 +577,9 @@ func (s *SnapshotGenerator) parseDump(d []byte) *dump {
 			indicesAndConstraints.WriteString("\n\n")
 		case strings.HasPrefix(line, "ALTER TABLE") && strings.Contains(line, "ADD CONSTRAINT"):
 			indicesAndConstraints.WriteString(line)
+		case strings.HasPrefix(line, "ALTER TABLE") && isClusterOnAlterTable(line):
+			indicesAndConstraints.WriteString(line)
+			indicesAndConstraints.WriteString("\n\n")
 		case strings.HasPrefix(line, "ALTER TABLE") && strings.Contains(line, "REPLICA IDENTITY"):
 			// REPLICA IDENTITY lines should be in the indicesAndConstraints section
 			// since they reference constraints/indices that are also there
@@ -640,6 +643,10 @@ func (s *SnapshotGenerator) parseDump(d []byte) *dump {
 func isLegacyPLPGSQLHandlerFunctionStart(line string) bool {
 	return strings.HasPrefix(line, "CREATE FUNCTION public.plpgsql_call_handler() RETURNS language_handler") ||
 		strings.HasPrefix(line, "CREATE FUNCTION public.plpgsql_validator(oid) RETURNS void")
+}
+
+func isClusterOnAlterTable(line string) bool {
+	return strings.Contains(line, " CLUSTER ON ")
 }
 
 func (s *SnapshotGenerator) filterTriggers(eventTriggersDump []byte, excludedSchemas []string) []byte {

@@ -81,6 +81,24 @@ func TestAdapter_walEventToMessage(t *testing.T) {
 			wantErr: nil,
 		},
 		{
+			name: "pgstream internal dml event",
+			event: &wal.Event{
+				Data: &wal.Data{
+					Schema: "pgstream",
+					Table:  "table_ids",
+					Action: "I",
+				},
+			},
+			schemaObserver: &mockSchemaObserver{
+				isMaterializedViewFn: func(schema, table string) bool {
+					panic("pgstream internal DML should not inspect schema")
+				},
+			},
+
+			wantMsg: &walMessage{},
+			wantErr: nil,
+		},
+		{
 			name:  "ddl event with ddl adapter",
 			event: testDDLWalEvent,
 			schemaObserver: &mockSchemaObserver{
@@ -306,6 +324,26 @@ func TestAdapter_walEventToQueries(t *testing.T) {
 			schemaObserver: &mockSchemaObserver{
 				isMaterializedViewFn: func(schema, table string) bool {
 					return schema == "public" && table == "mat_view"
+				},
+			},
+			dmlAdapter: testDMLAdapter,
+			ddlAdapter: testDDLAdapter,
+
+			wantQueries: []*query{{}},
+			wantErr:     nil,
+		},
+		{
+			name: "pgstream internal dml event",
+			event: &wal.Event{
+				Data: &wal.Data{
+					Schema: "pgstream",
+					Table:  "table_ids",
+					Action: "I",
+				},
+			},
+			schemaObserver: &mockSchemaObserver{
+				isMaterializedViewFn: func(schema, table string) bool {
+					panic("pgstream internal DML should not inspect schema")
 				},
 			},
 			dmlAdapter: testDMLAdapter,
